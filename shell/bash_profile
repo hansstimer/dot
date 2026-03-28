@@ -1,0 +1,6 @@
+# bash_profile — Bash login shell setup
+# Source system profile first to preserve /etc/profile.d/ setup
+[ -f "$HOME/.profile" ] && . "$HOME/.profile"
+
+# Then source bashrc for interactive config
+[ -f "$HOME/.bashrc" ] && . "$HOME/.bashrc"

@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# dot-ssh — SSH to a remote host with credentials forwarded via environment
+# Tokens live only in the process tree. Nothing hits disk on the remote.
+set -euo pipefail
+
+usage() {
+    echo "Usage: dot-ssh user@host [ssh-options...]"
+    echo ""
+    echo "Forwards SSH agent, git identity, and GH token via environment."
+    echo "Attaches to (or creates) a tmux session named 'main'."
+    echo "All tmux panes/windows inherit the forwarded credentials."
+    echo ""
+    echo "Options:"
+    echo "  --no-tmux    Drop to a shell instead of attaching tmux"
+    echo "  --help       Show this help"
+    exit "${1:-0}"
+}
+
+TARGET=""
+USE_TMUX=true
+SSH_OPTS=()
+
+for arg in "$@"; do
+    case "$arg" in
+        --no-tmux) USE_TMUX=false ;;
+        --help|-h) usage 0 ;;
+        -*) SSH_OPTS+=("$arg") ;;
+        *)
+            if [ -z "$TARGET" ]; then
+                TARGET="$arg"
+            else
+                SSH_OPTS+=("$arg")
+            fi
+            ;;
+    esac
+done
+
+if [ -z "$TARGET" ]; then
+    echo "Error: No target host specified"
+    usage 1
+fi
+
+# Gather credentials from local machine
+GIT_AUTHOR_NAME="$(git config user.name 2>/dev/null || echo "")"
+GIT_AUTHOR_EMAIL="$(git config user.email 2>/dev/null || echo "")"
+GH_TOKEN="$(gh auth token 2>/dev/null || echo "")"
+
+# AWS — forward whatever is set locally
+AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID:-}"
+AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY:-}"
+AWS_SESSION_TOKEN="${AWS_SESSION_TOKEN:-}"
+AWS_PROFILE="${AWS_PROFILE:-}"
+AWS_REGION="${AWS_REGION:-${AWS_DEFAULT_REGION:-}}"
+
+# Build the remote command that sets env vars and launches tmux
+ENV_PREFIX=""
+[ -n "$GIT_AUTHOR_NAME" ] && ENV_PREFIX="$ENV_PREFIX GIT_AUTHOR_NAME='$GIT_AUTHOR_NAME'"
+[ -n "$GIT_AUTHOR_EMAIL" ] && ENV_PREFIX="$ENV_PREFIX GIT_AUTHOR_EMAIL='$GIT_AUTHOR_EMAIL'"
+[ -n "$GIT_AUTHOR_NAME" ] && ENV_PREFIX="$ENV_PREFIX GIT_COMMITTER_NAME='$GIT_AUTHOR_NAME'"
+[ -n "$GIT_AUTHOR_EMAIL" ] && ENV_PREFIX="$ENV_PREFIX GIT_COMMITTER_EMAIL='$GIT_AUTHOR_EMAIL'"
+[ -n "$GH_TOKEN" ] && ENV_PREFIX="$ENV_PREFIX GH_TOKEN='$GH_TOKEN'"
+[ -n "$AWS_ACCESS_KEY_ID" ] && ENV_PREFIX="$ENV_PREFIX AWS_ACCESS_KEY_ID='$AWS_ACCESS_KEY_ID'"
+[ -n "$AWS_SECRET_ACCESS_KEY" ] && ENV_PREFIX="$ENV_PREFIX AWS_SECRET_ACCESS_KEY='$AWS_SECRET_ACCESS_KEY'"
+[ -n "$AWS_SESSION_TOKEN" ] && ENV_PREFIX="$ENV_PREFIX AWS_SESSION_TOKEN='$AWS_SESSION_TOKEN'"
+[ -n "$AWS_PROFILE" ] && ENV_PREFIX="$ENV_PREFIX AWS_PROFILE='$AWS_PROFILE'"
+[ -n "$AWS_REGION" ] && ENV_PREFIX="$ENV_PREFIX AWS_REGION='$AWS_REGION' AWS_DEFAULT_REGION='$AWS_REGION'"
+
+if [ "$USE_TMUX" = true ]; then
+    REMOTE_CMD="$ENV_PREFIX tmux new-session -As main"
+else
+    REMOTE_CMD="$ENV_PREFIX exec bash -l"
+fi
+
+# -A: forward SSH agent
+# -t: force TTY (required for tmux)
+# shellcheck disable=SC2029
+exec ssh -A -t "${SSH_OPTS[@]}" "$TARGET" "$REMOTE_CMD"

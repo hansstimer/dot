@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bash ~/.claude/statusline-command.sh)",
+      "Bash(infocmp -x xterm-ghostty)",
+      "Bash(docker --version)",
+      "Bash(docker info:*)",
+      "Bash(docker context:*)",
+      "Read(//var/run/**)",
+      "Bash(open -a OrbStack)",
+      "Bash(chmod:*)",
+      "Bash(docker build:*)",
+      "Bash(docker run:*)",
+      "Bash(bash test/run-tests.sh 2>&1)",
+      "Bash(docker rmi:*)",
+      "Bash(wc:*)",
+      "Bash(env)",
+      "Bash(git config:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

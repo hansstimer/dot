@@ -1,0 +1,48 @@
+font-family = MonoLisa
+font-size = 15
+font-thicken = true
+font-codepoint-map = U+23FB-U+23FE,U+2665,U+26A1,U+2B58,U+E000-U+E00A,U+E0A0-U+E0A3,U+E0B0-U+E0D4,U+E200-U+E2A9,U+E300-U+E3E3,U+E5FA-U+E6AA,U+E700-U+E7C5,U+EA60-U+EBEB,U+F000-U+F2E0,U+F300-U+F372,U+F400-U+F532,U+F0001-U+F1AF0=Symbols Nerd Font Mono
+
+# Colors — match Terminal.app Homebrew profile
+background = 000000
+foreground = 28fe14
+cursor-color = 38fe27
+bold-is-bright = false
+selection-background = 0800e8
+selection-foreground = ffffff
+
+# ANSI colors — macOS Terminal.app default palette
+# Black
+palette = 0=#000000
+palette = 8=#666666
+# Red
+palette = 1=#990000
+palette = 9=#e50000
+# Green
+palette = 2=#00a600
+palette = 10=#00d900
+# Yellow
+palette = 3=#999900
+palette = 11=#e5e500
+# Blue
+palette = 4=#2F6DF6
+palette = 12=#3070FF
+# Magenta
+palette = 5=#b200b2
+palette = 13=#e500e5
+# Cyan
+palette = 6=#00a6b2
+palette = 14=#00e5e5
+# White
+palette = 7=#bfbfbf
+palette = 15=#e5e5e5
+
+# Cursor
+cursor-style = block
+cursor-style-blink = true
+
+# Window
+window-padding-x = 2
+window-padding-y = 2
+background-opacity = 1.0
+unfocused-split-opacity = 0.5

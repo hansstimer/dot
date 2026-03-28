@@ -1,0 +1,30 @@
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TERM=xterm-ghostty
+ENV COLORTERM=truecolor
+
+# Minimal base — simulates a fresh ephemeral host
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    bash \
+    curl \
+    git \
+    ca-certificates \
+    sudo \
+    ncurses-bin \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create a non-root user with passwordless sudo
+RUN useradd -m -s /bin/bash testuser \
+    && echo "testuser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+USER testuser
+WORKDIR /home/testuser
+
+# Copy dot repo
+COPY --chown=testuser:testuser . /home/testuser/dot
+
+# Set DOT_DIR
+ENV DOT_DIR=/home/testuser/dot
+
+CMD ["bash"]

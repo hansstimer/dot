@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# dot-update — Pull latest dotfiles and re-run setup
+set -euo pipefail
+
+DOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+
+echo "=== dot-update ==="
+
+if [ -d "$DOT_DIR/.git" ]; then
+    echo "  Pulling latest..."
+    cd "$DOT_DIR"
+    git pull --rebase 2>&1 | sed 's/^/  /'
+    cd - >/dev/null
+else
+    echo "  [WARN] Not a git repo — cannot pull. Use dot-push from your local machine."
+fi
+
+echo "  Running install..."
+bash "$DOT_DIR/install.sh" "$@"

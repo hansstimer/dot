@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+# dot-push — Push dotfiles to a remote host via scp+ssh
+set -euo pipefail
+
+DOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+
+usage() {
+    echo "Usage: dot-push user@host [OPTIONS]"
+    echo ""
+    echo "Options:"
+    echo "  --minimal     Configs + terminfo only, no packages"
+    echo "  --no-claude   Skip Claude Code installation"
+    echo "  --dry-run     Show what would happen"
+    echo "  --help        Show this help"
+    exit "${1:-0}"
+}
+
+if [ $# -lt 1 ]; then
+    usage 1
+fi
+
+TARGET=""
+INSTALL_ARGS="--remote"
+
+for arg in "$@"; do
+    case "$arg" in
+        --minimal) INSTALL_ARGS="$INSTALL_ARGS --minimal" ;;
+        --no-claude) INSTALL_ARGS="$INSTALL_ARGS --no-claude" ;;
+        --dry-run) INSTALL_ARGS="$INSTALL_ARGS --dry-run" ;;
+        --help|-h) usage 0 ;;
+        -*) echo "Unknown option: $arg"; usage 1 ;;
+        *) TARGET="$arg" ;;
+    esac
+done
+
+if [ -z "$TARGET" ]; then
+    echo "Error: No target host specified"
+    usage 1
+fi
+
+echo "=== dot-push to $TARGET ==="
+
+# Create tarball excluding macOS-only and non-essential files
+TMPFILE="$(mktemp /tmp/dot-push.XXXXXX.tar.gz)"
+trap 'rm -f "$TMPFILE"' EXIT
+
+echo "  Creating tarball..."
+tar -czf "$TMPFILE" \
+    -C "$(dirname "$DOT_DIR")" \
+    --exclude='.git' \
+    --exclude='ghostty' \
+    --exclude='zed' \
+    --exclude='spec.md' \
+    --exclude='.DS_Store' \
+    --exclude='test' \
+    --exclude='.claude' \
+    "$(basename "$DOT_DIR")"
+
+echo "  Tarball: $(du -h "$TMPFILE" | awk '{print $1}')"
+
+# Version info
+VERSION_INFO="pushed: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+if [ -d "$DOT_DIR/.git" ]; then
+    SHA="$(cd "$DOT_DIR" && git rev-parse --short HEAD 2>/dev/null || echo "unknown")"
+    VERSION_INFO="$VERSION_INFO\ngit: $SHA"
+fi
+
+echo "  Uploading to $TARGET..."
+scp -q "$TMPFILE" "$TARGET:~/dot.tar.gz"
+
+echo "  Installing on $TARGET..."
+# shellcheck disable=SC2029
+ssh "$TARGET" "
+    set -e
+    mkdir -p ~/dot
+    tar -xzf ~/dot.tar.gz -C ~/ --strip-components=0
+    rm -f ~/dot.tar.gz
+    printf '%b\n' '$VERSION_INFO' > ~/dot/.version
+    cd ~/dot && bash install.sh $INSTALL_ARGS
+"
+
+echo ""
+echo "  Connect with: dot-ssh $TARGET"
+
+echo ""
+echo "=== dot-push complete ==="

@@ -1,0 +1,42 @@
+# zshrc — Zsh-specific configuration
+# Sources shared env and aliases, then zsh-specific setup
+
+# If not interactive, bail
+[[ $- == *i* ]] || return
+
+# --- Shared config ---
+DOT_DIR="${DOT_DIR:-$HOME/dot}"
+[ -f "$DOT_DIR/shell/env.sh" ] && . "$DOT_DIR/shell/env.sh"
+[ -f "$DOT_DIR/shell/aliases.sh" ] && . "$DOT_DIR/shell/aliases.sh"
+
+# --- History ---
+HISTFILE=~/.zsh_history
+HISTSIZE=10000
+SAVEHIST=10000
+setopt HIST_IGNORE_DUPS
+setopt HIST_IGNORE_SPACE
+setopt SHARE_HISTORY
+setopt APPEND_HISTORY
+
+# --- Options ---
+setopt AUTO_CD
+setopt CORRECT
+setopt NO_BEEP
+
+# --- Completion ---
+autoload -Uz compinit && compinit
+zstyle ':completion:*' menu select
+zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
+zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
+
+# --- Key bindings ---
+bindkey -e
+bindkey '^[[A' history-search-backward
+bindkey '^[[B' history-search-forward
+
+# --- Prompt ---
+[ -f "$DOT_DIR/shell/prompt.sh" ] && . "$DOT_DIR/shell/prompt.sh"
+
+# --- Local overrides ---
+[ -f "$HOME/.local.sh" ] && . "$HOME/.local.sh"
+[ -f "$HOME/.local.zsh" ] && . "$HOME/.local.zsh"

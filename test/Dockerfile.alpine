@@ -1,0 +1,29 @@
+FROM alpine:3.19
+
+ENV TERM=xterm-ghostty
+ENV COLORTERM=truecolor
+
+# Minimal base — simulates a fresh ephemeral host
+RUN apk add --no-cache \
+    bash \
+    curl \
+    git \
+    sudo \
+    ncurses \
+    ncurses-terminfo \
+    shadow
+
+# Create a non-root user with passwordless sudo
+RUN adduser -D -s /bin/bash testuser \
+    && echo "testuser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+USER testuser
+WORKDIR /home/testuser
+
+# Copy dot repo
+COPY --chown=testuser:testuser . /home/testuser/dot
+
+# Set DOT_DIR
+ENV DOT_DIR=/home/testuser/dot
+
+CMD ["bash"]

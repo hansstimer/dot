@@ -1,0 +1,43 @@
+# bashrc — Bash-specific configuration
+# Sources shared env and aliases, then bash-specific setup
+
+# If not interactive, bail
+case $- in
+    *i*) ;;
+    *) return ;;
+esac
+
+# --- Shared config ---
+DOT_DIR="${DOT_DIR:-$HOME/dot}"
+[ -f "$DOT_DIR/shell/env.sh" ] && . "$DOT_DIR/shell/env.sh"
+[ -f "$DOT_DIR/shell/aliases.sh" ] && . "$DOT_DIR/shell/aliases.sh"
+
+# --- History ---
+HISTFILE=~/.bash_history
+HISTSIZE=10000
+HISTFILESIZE=20000
+HISTCONTROL=ignoredups:ignorespace
+shopt -s histappend
+
+# --- Shell options ---
+shopt -s checkwinsize
+shopt -s globstar 2>/dev/null || true
+shopt -s cdspell 2>/dev/null || true
+
+# --- Completion ---
+if [ -f /usr/share/bash-completion/bash_completion ]; then
+    . /usr/share/bash-completion/bash_completion
+elif [ -f /etc/bash_completion ]; then
+    . /etc/bash_completion
+fi
+
+# --- Key bindings ---
+bind '"\e[A": history-search-backward' 2>/dev/null
+bind '"\e[B": history-search-forward' 2>/dev/null
+
+# --- Prompt ---
+[ -f "$DOT_DIR/shell/prompt.sh" ] && . "$DOT_DIR/shell/prompt.sh"
+
+# --- Local overrides ---
+[ -f "$HOME/.local.sh" ] && . "$HOME/.local.sh"
+[ -f "$HOME/.local.bash" ] && . "$HOME/.local.bash"
