@@ -10,7 +10,7 @@ install.sh                 Entry point. Parses flags, runs phases in order.
   ├── setup/packages.sh    Standalone. Installs packages, builds tmux, gh, aws, claude.
   ├── setup/terminfo.sh    Standalone. Compiles xterm-ghostty terminfo.
   ├── setup/link.sh        Standalone. Symlinks configs, generates gitconfig.
-  └── setup/post-install.sh  Standalone. Writes .version, prints color test.
+  └── setup/post-install.sh  Standalone. Seeds ~/.local.sh, writes .version, prints color test.
 
 shell/env.sh               Sourced by bashrc/zshrc. TERM negotiation + PATH + env.
 shell/aliases.sh           Sourced by bashrc/zshrc. Shared aliases.
@@ -51,13 +51,13 @@ Set by `setup/detect.sh`, exported, available to all phases:
 
 ## Install Phases
 
-Phases run in order. Each is a separate script sourced in a subshell.
+Phases run in order. `detect` is sourced directly (so vars propagate). Other phases run in subshells for error isolation.
 
-1. **detect** (fatal) — Sets all `DOT_*` variables. If this fails, install aborts.
+1. **detect** (fatal, sourced directly) — Sets all `DOT_*` variables. If this fails, install aborts.
 2. **packages** (non-fatal, skipped with `--minimal`) — Installs core tools, gh (from official repos), AWS CLI v2, builds tmux from nightly source, installs Claude Code.
 3. **terminfo** (non-fatal) — Compiles `xterm-ghostty` into `~/.terminfo/`. Falls back silently.
 4. **link** (non-fatal per-link) — Creates symlinks, generates gitconfig, backs up existing files.
-5. **post-install** (non-fatal) — Writes `.version`, runs color test.
+5. **post-install** (non-fatal) — Seeds `~/.local.sh` (if not present, never overwritten), writes `.version`, runs color test.
 
 Error handling: `set -euo pipefail` everywhere. Each phase catches its own errors. A non-fatal phase failure increments `PHASE_ERRORS` and continues. Exit code is 1 if any phase had errors.
 
@@ -77,7 +77,9 @@ Managed by `setup/link.sh`. Uses `ln -sfn` for atomic replacement.
 | `zed/settings.json` | `~/.config/zed/settings.json` | macOS only |
 | `claude/settings.json` | `~/.claude/settings.json` | claude installed |
 
-`~/.gitconfig` is **generated** from `git/gitconfig.template` (not symlinked). On `--remote`, the SSH URL rewrite section is stripped.
+`~/.gitconfig` is **generated** from `git/gitconfig.template` (not symlinked):
+- **Local installs:** `[user]` section with name/email is prepended. Identity is read from the existing gitconfig (before backup) or global git config, or prompted interactively. This preserves identity across re-runs.
+- **Remote installs (`--remote`):** No `[user]` section — identity via env vars from `dot-ssh`. SSH URL rewrite section is also stripped.
 
 ## TERM Negotiation (shell/env.sh)
 
@@ -96,7 +98,7 @@ else if TERM is unset:
 
 The `_dot_has_terminfo()` function checks via `infocmp` first, then falls back to filesystem checks in `~/.terminfo/`, `/usr/share/terminfo/`, `/usr/lib/terminfo/`, `/etc/terminfo/`. Terminfo entries are stored under either the first character or hex value of the first character (e.g., `x/xterm-ghostty` or `78/xterm-ghostty`).
 
-`COLORTERM=truecolor` is always exported regardless of TERM.
+`COLORTERM=truecolor`, `CLICOLOR=1`, and `LSCOLORS` are always exported regardless of TERM.
 
 ## tmux Configuration
 
@@ -148,7 +150,7 @@ Key settings in `tmux/tmux.conf`:
 | `SSH_AUTH_SOCK` | SSH agent | git-over-SSH |
 | `SSH_CONNECTION` | SSH session | prompt SSH badge |
 
-**Git identity:** `~/.gitconfig` has no `[user]` section. Git reads identity from `GIT_AUTHOR_NAME`/`GIT_AUTHOR_EMAIL` in the environment.
+**Git identity (remote):** `~/.gitconfig` has no `[user]` section on remote installs. Git reads identity from `GIT_AUTHOR_NAME`/`GIT_AUTHOR_EMAIL` in the environment. On local installs, `[user]` is baked into the gitconfig instead.
 
 **GitHub CLI:** `gh` reads `GH_TOKEN` from environment. Installed from official GitHub repos (latest on apt/dnf, distro version on Alpine/pacman). Works for `gh pr create`, `gh issue list`, etc.
 
@@ -227,7 +229,8 @@ On macOS, `install.sh` detects bash 3.2 and re-execs under `zsh`.
 | `~/.bash_profile` | symlink → `dot/shell/bash_profile` | |
 | `~/.zshrc` | symlink → `dot/shell/zshrc` | if zsh available |
 | `~/.zprofile` | symlink → `dot/shell/zprofile` | if zsh available |
-| `~/.gitconfig` | generated file | no [user] section — identity via env vars |
+| `~/.gitconfig` | generated file | has [user] on local, no [user] on remote |
+| `~/.local.sh` | seeded file | created on first run, never overwritten |
 | `~/.gitignore_global` | symlink → `dot/git/gitignore_global` | |
 | `~/.tmux.conf` | symlink → `dot/tmux/tmux.conf` | |
 | `~/.config/ghostty/config` | symlink → `dot/ghostty/config` | macOS only |
@@ -251,7 +254,9 @@ On macOS, `install.sh` detects bash 3.2 and re-execs under `zsh`.
 
 **`gh` says "not logged in" on remote:** You connected with plain `ssh` instead of `dot-ssh`. The `GH_TOKEN` env var is only set by `dot-ssh`. Disconnect and reconnect via `dot-ssh user@host`.
 
-**Git says "please tell me who you are" on remote:** Same cause — `GIT_AUTHOR_NAME` is only set by `dot-ssh`. The gitconfig has no `[user]` section by design.
+**Git says "please tell me who you are" on remote:** Same cause — `GIT_AUTHOR_NAME` is only set by `dot-ssh`. The remote gitconfig has no `[user]` section by design. (Local installs have `[user]` baked in, so this only affects remotes.)
+
+**Git says "please tell me who you are" on local:** The install didn't find your existing identity. Run `git config --global user.name 'Your Name'` and `git config --global user.email 'you@example.com'`, then re-run `install.sh` — it will read and preserve these values.
 
 **Credentials lost after tmux detach/reattach:** If you reattach via `dot-ssh`, `update-environment` re-imports fresh values. If you reattach via plain `tmux attach` (inside a regular SSH session), the old values remain but won't be refreshed. Always use `dot-ssh` to connect.
 

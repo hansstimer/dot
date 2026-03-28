@@ -70,7 +70,7 @@ shell/prompt.sh       Built-in prompt — git branch, SSH badge, colors
 shell/bashrc          Bash config — sources the above
 shell/zshrc           Zsh config — sources the above
 tmux/tmux.conf        True color, undercurl, escape-time 10, C-a prefix, credential forwarding
-git/gitconfig.template    No [user] section — identity via env vars from dot-ssh
+git/gitconfig.template    Git config — [user] on local, env vars on remote
 ghostty/config        Ghostty terminal config (macOS only)
 zed/settings.json     Zed editor settings (macOS only)
 claude/settings.json  Claude Code statusline config
@@ -104,13 +104,16 @@ Flags combine: `install.sh --remote --minimal --no-claude --dry-run`
 
 ## Local Overrides
 
-Drop these files in your home directory for per-machine customization:
+`~/.local.sh` is created on first install with an empty template. It's sourced by both bash and zsh, and **never overwritten** by dot. Put machine-specific config here:
 
-- `~/.local.sh` — sourced by both bash and zsh
+- Extra PATH entries (e.g., LM Studio, OrbStack)
+- Work-specific aliases
+- API keys / tokens
+- Tool integrations that vary per machine
+
+Also available for shell-specific overrides:
 - `~/.local.bash` — sourced by bash only
 - `~/.local.zsh` — sourced by zsh only
-
-Use them for API keys, extra PATH entries, work-specific aliases. Never committed.
 
 ## Terminal Chain
 
@@ -139,7 +142,7 @@ No tokens or secrets are ever written to disk on remote hosts.
 
 **tmux propagation** — `tmux.conf` has `update-environment` configured for all credential env vars (git, gh, AWS, SSH). When you attach a tmux session via `dot-ssh`, tmux re-imports the fresh values from your SSH session. Every new pane and window inherits them.
 
-**gitconfig** — The generated `~/.gitconfig` has no `[user]` section. Identity comes entirely from environment. On `--remote` installs, the `[url]` SSH rewrite is also stripped since agent forwarding handles SSH auth and `GH_TOKEN` handles HTTPS.
+**gitconfig** — On **local** installs, the generated `~/.gitconfig` includes a `[user]` section with your name/email (read from existing config or prompted). On **remote** installs, there's no `[user]` section — identity comes from env vars forwarded by `dot-ssh`. On remote, the `[url]` SSH rewrite is also stripped since agent forwarding handles SSH auth and `GH_TOKEN` handles HTTPS.
 
 **Claude Code** — runs inside tmux panes, inherits all of the above. `gh pr create`, `git push`, `aws s3 ls`, etc. all work from within Claude.
 

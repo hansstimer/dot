@@ -56,7 +56,7 @@ dot/
 │   ├── bash_profile         # Bash login shell setup
 │   └── prompt.sh            # Built-in prompt (no external dependencies)
 ├── git/
-│   ├── gitconfig.template   # Git config with {{NAME}} and {{EMAIL}} placeholders
+│   ├── gitconfig.template   # Git config — [user] added on local, omitted on remote
 │   └── gitignore_global     # Global gitignore patterns
 ├── tmux/
 │   └── tmux.conf            # tmux configuration
@@ -163,7 +163,7 @@ Some hosts have zsh, some only bash. Aliases and env vars shouldn't be duplicate
 **`shell/env.sh`** (POSIX):
 - PATH construction (deduplicated, order-preserving)
 - EDITOR, VISUAL, PAGER
-- COLORTERM=truecolor
+- COLORTERM=truecolor, CLICOLOR=1, LSCOLORS
 - TERM handling (see Terminal section) — **must be the first thing evaluated**, before any command that reads terminfo
 - Homebrew shellenv (macOS only, detected)
 - Go, npm, local bin paths
@@ -205,16 +205,17 @@ Some hosts have zsh, some only bash. Aliases and env vars shouldn't be duplicate
 
 ### Local Overrides
 
-Both `bashrc` and `zshrc` source these files at the end, if they exist:
-- `~/.local.sh` — shared overrides (POSIX, runs in both shells)
+`~/.local.sh` is created by `post-install.sh` on first run with an empty template. It is **never overwritten** on subsequent runs. Both `bashrc` and `zshrc` source it at the end.
+
+Shell-specific overrides are also supported:
 - `~/.local.zsh` — zsh-specific overrides (only from zshrc)
 - `~/.local.bash` — bash-specific overrides (only from bashrc)
 
 Use these for:
-- Extra PATH entries
-- Employer-specific aliases
+- Extra PATH entries (e.g., LM Studio, OrbStack)
+- Machine-specific aliases
 - API keys / tokens (never in the repo)
-- Overrides for any default
+- Tool integrations that vary per machine
 
 ---
 
@@ -422,13 +423,11 @@ On Debian/Ubuntu where `fd` installs as `fdfind`, `aliases.sh` creates `alias fd
 
 ## Git Configuration
 
-`git/gitconfig.template` is generated into `~/.gitconfig` during install (not symlinked).
+`git/gitconfig.template` is generated into `~/.gitconfig` during install (not symlinked). The template contains `[core]`, `[init]`, `[pull]`, `[push]`, `[filter "lfs"]`, `[alias]`, and `[url]` sections.
 
-**No `[user]` section.** Git identity is set entirely via environment variables (`GIT_AUTHOR_NAME`, `GIT_AUTHOR_EMAIL`, `GIT_COMMITTER_NAME`, `GIT_COMMITTER_EMAIL`), forwarded by `dot-ssh` at connection time. Nothing on disk.
+**Local installs:** A `[user]` section with name/email is prepended to the generated config. Identity is read from the existing `~/.gitconfig` (before backup) or global git config, or prompted interactively. This ensures `git commit` works without environment variable injection.
 
-The template contains `[core]`, `[init]`, `[pull]`, `[push]`, `[filter "lfs"]`, `[alias]`, and `[url]` sections.
-
-**SSH URL rewrite:** The `[url]` section rewrites `https://github.com/` to `ssh://`. On `--remote` installs this is stripped, since SSH agent forwarding + `GH_TOKEN` handle auth without it.
+**Remote installs (`--remote`):** No `[user]` section. Git identity comes entirely from environment variables (`GIT_AUTHOR_NAME`, etc.) forwarded by `dot-ssh` at connection time. Nothing on disk. The `[url]` SSH rewrite is also stripped, since SSH agent forwarding + `GH_TOKEN` handle auth.
 
 ---
 
@@ -571,7 +570,7 @@ test/
 - **Claude Code settings** — Ship a default `~/.claude/settings.json` with statusline config.
 - **Starship** — Dropped. Use a simple built-in prompt (`prompt.sh`) with no external dependencies.
 - **Vim config** — Use stock vim. No managed vimrc.
-- **Git identity** — Via environment variables (`GIT_AUTHOR_NAME`, etc.), forwarded by `dot-ssh`. No `[user]` section in gitconfig. Nothing on disk.
+- **Git identity** — Local: `[user]` in gitconfig, preserved across re-runs. Remote: env vars (`GIT_AUTHOR_NAME`, etc.) forwarded by `dot-ssh`, no `[user]` in gitconfig.
 - **Credentials** — All forwarded via `dot-ssh` environment injection + tmux `update-environment`. Never written to disk. Covers git identity, GH token, AWS credentials, SSH agent.
 - **GitHub CLI** — Installed from official repos. Auth via `GH_TOKEN` env var.
 - **AWS CLI** — v2 from official installer (glibc Linux), v1 via pip (Alpine/musl), brew (macOS).
