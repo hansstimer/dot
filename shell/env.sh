@@ -33,8 +33,10 @@ if [ -z "${TMUX:-}" ]; then
     fi
 fi
 
-# Always export truecolor
+# Always export truecolor and enable CLI colors
 export COLORTERM=truecolor
+export CLICOLOR=1
+export LSCOLORS=GxFxCxDxBxegedabagaced  # macOS ls colors
 
 # === Editor ===
 export EDITOR=vim

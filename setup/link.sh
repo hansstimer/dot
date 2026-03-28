@@ -80,7 +80,8 @@ do_link() {
 }
 
 # --- Git config (generated, not symlinked) ---
-# Identity is handled via environment (GIT_AUTHOR_NAME, etc.), forwarded by dot-ssh.
+# Local installs: [user] section with name/email baked in.
+# Remote installs: no [user] section — identity via env vars from dot-ssh.
 setup_gitconfig() {
     local template="$DOT_DIR/git/gitconfig.template"
     local target="$HOME/.gitconfig"
@@ -88,6 +89,20 @@ setup_gitconfig() {
     if [ ! -f "$template" ]; then
         echo "  [WARN] Git config template not found: $template"
         return
+    fi
+
+    # Read existing identity BEFORE backup (so we don't lose it)
+    local git_name=""
+    local git_email=""
+    if [ "$DOT_REMOTE" != true ]; then
+        # Try current gitconfig file
+        if [ -f "$target" ] || [ -L "$target" ]; then
+            git_name="$(git config --file "$target" user.name 2>/dev/null || echo "")"
+            git_email="$(git config --file "$target" user.email 2>/dev/null || echo "")"
+        fi
+        # Fallback to global git config
+        [ -z "$git_name" ] && git_name="$(git config user.name 2>/dev/null || echo "")"
+        [ -z "$git_email" ] && git_email="$(git config user.email 2>/dev/null || echo "")"
     fi
 
     if [ "$DRY_RUN" = true ]; then
@@ -110,9 +125,30 @@ setup_gitconfig() {
     local content
     content="$(cat "$template")"
 
-    # Strip SSH URL rewrite on remote installs
+    # Remote: strip SSH URL rewrite and skip [user] (identity via dot-ssh env vars)
     if [ "$DOT_REMOTE" = true ]; then
         content="$(echo "$content" | sed '/\[url "ssh:\/\/git@github.com\/"\]/,/insteadOf = https:\/\/github.com\//d')"
+    else
+        # Local: prompt if interactive and still missing
+        if [ -z "$git_name" ] && [ "${DOT_IS_INTERACTIVE:-false}" = true ]; then
+            printf "  Git user.name: "
+            read -r git_name
+        fi
+        if [ -z "$git_email" ] && [ "${DOT_IS_INTERACTIVE:-false}" = true ]; then
+            printf "  Git user.email: "
+            read -r git_email
+        fi
+
+        # Prepend [user] section if we have identity
+        if [ -n "$git_name" ] && [ -n "$git_email" ]; then
+            local user_section
+            user_section="$(printf '[user]\n    name = %s\n    email = %s\n' "$git_name" "$git_email")"
+            content="${user_section}
+${content}"
+            echo "  [GIT] Identity: $git_name <$git_email>"
+        else
+            echo "  [WARN] Git user.name/email not set — run: git config --global user.name 'Your Name'"
+        fi
     fi
 
     echo "$content" > "$target"

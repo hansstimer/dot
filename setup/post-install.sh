@@ -28,6 +28,18 @@ if [ -d "$HOME/.local/bin" ]; then
     esac
 fi
 
+# Create ~/.local.sh if it doesn't exist (never overwritten)
+if [ ! -f "$HOME/.local.sh" ] && [ "$DRY_RUN" != true ]; then
+    cat > "$HOME/.local.sh" <<'LOCALEOF'
+# ~/.local.sh — Machine-specific overrides (sourced by both bash and zsh)
+# This file is never managed or overwritten by dot. Edit freely.
+
+LOCALEOF
+    echo "  [OK] Created ~/.local.sh (edit for machine-specific config)"
+elif [ -f "$HOME/.local.sh" ]; then
+    echo "  [OK] ~/.local.sh already exists — not touching it"
+fi
+
 # Write version file
 if [ "$DRY_RUN" != true ]; then
     version_info="installed: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
