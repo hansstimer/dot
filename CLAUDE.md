@@ -74,6 +74,7 @@ Managed by `setup/link.sh`. Uses `ln -sfn` for atomic replacement.
 | `git/gitignore_global` | `~/.gitignore_global` | always |
 | `tmux/tmux.conf` | `~/.tmux.conf` | always |
 | `ghostty/config` | `~/.config/ghostty/config` | macOS only |
+| `ghostty/themes` | `~/.config/ghostty/themes` | macOS only |
 | `zed/settings.json` | `~/.config/zed/settings.json` | macOS only |
 | `claude/settings.json` | `~/.claude/settings.json` | claude installed |
 
@@ -160,6 +161,26 @@ Key settings in `tmux/tmux.conf`:
 
 **Git HTTPS auth:** If `gh` is installed on the remote, `gh auth setup-git` can configure it as a credential helper that reads `GH_TOKEN`. This is not done automatically — run it manually if needed.
 
+## Ghostty Themes
+
+Ghostty auto-switches between light and dark themes based on macOS system appearance via the config directive:
+
+```
+theme = light:dot-light,dark:dot-dark
+```
+
+Theme files live in `ghostty/themes/` and are symlinked to `~/.config/ghostty/themes/`. Ghostty discovers custom themes from this directory by name.
+
+**dot-dark:** Homebrew-inspired palette (green-on-black). Background `#1c1c1c` (soft black, not pure `#000000`). Custom blues (`#2F6DF6`/`#3070FF`). Red and green brightened from stock Homebrew (`#cc3333`/`#2d9e40`) so diff backgrounds are visible on the dark background.
+
+**dot-light:** Based on Catppuccin Latte palette with a warm background (`#f8f8f0`). Colors are medium-saturated (400-600 range) to work as both text foreground and diff background fills. Purple uses `#8839ef` (deeper than Catppuccin's default pink).
+
+**Design rationale:** Terminal ANSI palette entries serve double duty — as foreground text colors AND as background fills (e.g., diff added/removed highlighting). Colors must be readable as text on the theme background AND visible as background tints. This rules out very dark (800-900) colors for normal palette entries on dark themes and very light (pastel) colors on light themes. The Catppuccin Latte palette was chosen for light mode because it's battle-tested for this constraint.
+
+**`window-theme = auto`** makes the title bar follow system appearance.
+
+**Modifying themes:** Edit `ghostty/themes/dot-light` or `ghostty/themes/dot-dark` directly. Reload in Ghostty with `Ctrl+Shift+,`. A full quit/relaunch may be needed for theme auto-switching to re-evaluate system appearance.
+
 ## Prompt (shell/prompt.sh)
 
 No external dependencies. Works in both bash and zsh.
@@ -234,6 +255,7 @@ On macOS, `install.sh` detects bash 3.2 and re-execs under `zsh`.
 | `~/.gitignore_global` | symlink → `dot/git/gitignore_global` | |
 | `~/.tmux.conf` | symlink → `dot/tmux/tmux.conf` | |
 | `~/.config/ghostty/config` | symlink → `dot/ghostty/config` | macOS only |
+| `~/.config/ghostty/themes` | symlink → `dot/ghostty/themes` | macOS only |
 | `~/.config/zed/settings.json` | symlink → `dot/zed/settings.json` | macOS only |
 | `~/.claude/settings.json` | symlink → `dot/claude/settings.json` | if claude installed |
 | `~/.terminfo/x/xterm-ghostty` | compiled binary | from terminfo source |

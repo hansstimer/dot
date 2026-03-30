@@ -180,6 +180,7 @@ link_all() {
     # macOS-only
     if [ "${DOT_OS:-}" = "macos" ] && [ "$DOT_REMOTE" != true ]; then
         do_link "$DOT_DIR/ghostty/config" "$HOME/.config/ghostty/config"
+        do_link "$DOT_DIR/ghostty/themes" "$HOME/.config/ghostty/themes"
         do_link "$DOT_DIR/zed/settings.json" "$HOME/.config/zed/settings.json"
     fi
 
